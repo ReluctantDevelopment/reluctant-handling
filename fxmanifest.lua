@@ -2,8 +2,8 @@ fx_version 'cerulean'
 game 'gta5'
 
 author 'Reluctant'
-description 'In-game vehicle handling editor
-version '0.2'
+description 'In-game vehicle handling editor'
+version '0.3'
 
 shared_scripts {
     'config.lua',

@@ -5,16 +5,15 @@ local editVehicleType = 'car'
 local floatFields = {
     'fMass', 'fInitialDragCoeff', 'fDownforceModifier', 'fPercentSubmerged',
     'fDriveBiasFront', 'fInitialDriveForce', 'fDriveInertia',
-    'fClutchChangeRateScaleUpShift', 'fClutchChangeRateScaleDownShift',
-    'fInitialDriveMaxFlatVel', 'fBrakeForce', 'fBrakeBiasFront', 'fHandBrakeForce',
-    'fSteeringLock', 'fTractionCurveMax', 'fTractionCurveMin', 'fTractionCurveLateral',
-    'fTractionSpringDeltaMax', 'fLowSpeedTractionLossMult', 'fCamberStiffnesss',
-    'fTractionBiasFront', 'fTractionLossMult', 'fSuspensionForce',
-    'fSuspensionCompDamp', 'fSuspensionReboundDamp', 'fSuspensionUpperLimit',
-    'fSuspensionLowerLimit', 'fSuspensionRaise', 'fSuspensionBiasFront',
-    'fAntiRollBarForce', 'fAntiRollBarBiasFront', 'fRollCentreHeightFront',
-    'fRollCentreHeightRear', 'fCollisionDamageMult', 'fWeaponDamageMult',
-    'fDeformationDamageMult', 'fEngineDamageMult', 'fPetrolTankVolume', 'fOilVolume',
+    'fClutchChangeRateScaleUpShift', 'fClutchChangeRateScaleDownShift', 'fInitialDriveMaxFlatVel',
+    'fBrakeForce', 'fBrakeBiasFront', 'fHandBrakeForce', 'fSteeringLock',
+    'fTractionCurveMax', 'fTractionCurveMin', 'fTractionCurveLateral', 'fTractionSpringDeltaMax',
+    'fLowSpeedTractionLossMult', 'fCamberStiffnesss', 'fTractionBiasFront', 'fTractionLossMult',
+    'fSuspensionForce', 'fSuspensionCompDamp', 'fSuspensionReboundDamp',
+    'fSuspensionUpperLimit', 'fSuspensionLowerLimit', 'fSuspensionRaise', 'fSuspensionBiasFront',
+    'fAntiRollBarForce', 'fAntiRollBarBiasFront', 'fRollCentreHeightFront', 'fRollCentreHeightRear',
+    'fCollisionDamageMult', 'fWeaponDamageMult', 'fDeformationDamageMult', 'fEngineDamageMult',
+    'fPetrolTankVolume', 'fOilVolume',
 }
 
 local intFields = {
@@ -26,19 +25,54 @@ local vectorFields = {
 }
 
 local subHandlingFields = {
-    car   = { className = 'CCarHandlingData',    floats = {'fToeFront','fToeRear','fCamberFront','fCamberRear','fCastor','fEngineResistance','fMaxDriveBiasTransfer','fJumpForceScale','fBackEndPopUpCarImpulseScale','fBackEndPopUpBuildingImpulseScale','fBackEndPopUpMaxDeltaSpeed','fIncreasedRearBrakesBiasMod','fLowSpeedBumpSensitivity'} },
-    bike  = { className = 'CBikeHandlingData',   floats = {'fLeanFwdCOMMult','fLeanFwdForceMult','fLeanBakCOMMult','fLeanBakForceMult','fMaxBankAngle','fFullAnimAngle','fDesLeanReturnFrac','fStickLeanMult','fBrakingStabilityMult','fInAirSteerMult','fWheelieBalancePoint','fStoppieBalancePoint'} },
-    plane = { className = 'CFlyingHandlingData', floats = {'fThrust','fThrustFallOff','fThrustVectoring','fYawMult','fYawStabilise','fSideSlipMult','fRollMult','fRollStabilise','fPitchMult','fPitchStabilise','fAttackLiftMult','fAttackDiveMult','fFormLiftMult','fGearDownStartSpeed','fGearUpEndSpeed'} },
-    heli  = { className = 'CFlyingHandlingData', floats = {'fThrust','fThrustFallOff','fThrustVectoring','fYawMult','fYawStabilise','fSideSlipMult','fRollMult','fRollStabilise','fPitchMult','fPitchStabilise','fAttackLiftMult','fAttackDiveMult','fFormLiftMult'} },
-    boat  = { className = 'CBoatHandlingData',   floats = {'fThrust','fThrustFallOff','fDragCoeff','fRudder','fSinkMult','fAquaplaneForce'} },
+    car = {
+        className = 'CCarHandlingData',
+        floats = {
+            'fToeFront', 'fToeRear', 'fCamberFront', 'fCamberRear', 'fCastor',
+            'fEngineResistance', 'fMaxDriveBiasTransfer', 'fJumpForceScale',
+            'fBackEndPopUpCarImpulseScale', 'fBackEndPopUpBuildingImpulseScale',
+            'fBackEndPopUpMaxDeltaSpeed', 'fIncreasedRearBrakesBiasMod', 'fLowSpeedBumpSensitivity',
+        }
+    },
+    bike = {
+        className = 'CBikeHandlingData',
+        floats = {
+            'fLeanFwdCOMMult', 'fLeanFwdForceMult', 'fLeanBakCOMMult', 'fLeanBakForceMult',
+            'fMaxBankAngle', 'fFullAnimAngle', 'fDesLeanReturnFrac', 'fStickLeanMult',
+            'fBrakingStabilityMult', 'fInAirSteerMult', 'fWheelieBalancePoint', 'fStoppieBalancePoint',
+        }
+    },
+    plane = {
+        className = 'CFlyingHandlingData',
+        floats = {
+            'fThrust', 'fThrustFallOff', 'fThrustVectoring',
+            'fYawMult', 'fYawStabilise', 'fSideSlipMult',
+            'fRollMult', 'fRollStabilise', 'fPitchMult', 'fPitchStabilise',
+            'fAttackLiftMult', 'fAttackDiveMult', 'fFormLiftMult',
+            'fGearDownStartSpeed', 'fGearUpEndSpeed',
+        }
+    },
+    heli = {
+        className = 'CFlyingHandlingData',
+        floats = {
+            'fThrust', 'fThrustFallOff', 'fThrustVectoring',
+            'fYawMult', 'fYawStabilise', 'fSideSlipMult',
+            'fRollMult', 'fRollStabilise', 'fPitchMult', 'fPitchStabilise',
+            'fAttackLiftMult', 'fAttackDiveMult', 'fFormLiftMult',
+        }
+    },
+    boat = {
+        className = 'CBoatHandlingData',
+        floats = { 'fThrust', 'fThrustFallOff', 'fDragCoeff', 'fRudder', 'fSinkMult', 'fAquaplaneForce' }
+    },
 }
 
 local function DetectVehicleType(vehicle)
     local model = GetEntityModel(vehicle)
-    if IsThisModelABike(model)       then return 'bike'  end
-    if IsThisModelAPlane(model)      then return 'plane' end
-    if IsThisModelAHeli(model)        then return 'heli'  end
-    if IsThisModelABoat(model)       then return 'boat'  end
+    if IsThisModelABike(model) then return 'bike' end
+    if IsThisModelAPlane(model) then return 'plane' end
+    if IsThisModelAHeli(model) then return 'heli' end
+    if IsThisModelABoat(model) then return 'boat' end
     return 'car'
 end
 
@@ -145,11 +179,11 @@ local function OpenEditor()
     local ped = PlayerPedId()
     if not IsPedInAnyVehicle(ped, false) then return end
 
-    local vehicle   = GetVehiclePedIsIn(ped, false)
+    local vehicle = GetVehiclePedIsIn(ped, false)
     local modelName = GetDisplayNameFromVehicleModel(GetEntityModel(vehicle))
-    local vehType   = DetectVehicleType(vehicle)
+    local vehType = DetectVehicleType(vehicle)
 
-    editVehicle     = vehicle
+    editVehicle = vehicle
     editVehicleType = vehType
 
     local hasControl, err = EnsureControlOfVehicle(vehicle)
@@ -166,7 +200,7 @@ local function OpenEditor()
         data = {
             vehicleName = modelName,
             vehicleType = vehType,
-            handling    = CollectHandling(vehicle),
+            handling = CollectHandling(vehicle),
             subHandling = CollectSubHandling(vehicle, vehType),
         }
     })
