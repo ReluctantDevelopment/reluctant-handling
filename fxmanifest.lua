@@ -2,7 +2,7 @@ fx_version 'cerulean'
 game 'gta5'
 
 author 'Reluctant'
-description 'In-game vehicle handling editor with real-time apply and handling.meta export'
+description 'In-game vehicle handling editor
 version '0.2'
 
 shared_scripts {
