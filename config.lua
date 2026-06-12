@@ -2,5 +2,5 @@ Config = {}
 
 Config.cmdName = 'handling'
 Config.keybind = 'F7'
-Config.checkAce = false
+Config.checkAce = true
 Config.ace = 'reluctant.handling'

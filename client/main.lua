@@ -13,11 +13,12 @@ local floatFields = {
     'fSuspensionUpperLimit', 'fSuspensionLowerLimit', 'fSuspensionRaise', 'fSuspensionBiasFront',
     'fAntiRollBarForce', 'fAntiRollBarBiasFront', 'fRollCentreHeightFront', 'fRollCentreHeightRear',
     'fCollisionDamageMult', 'fWeaponDamageMult', 'fDeformationDamageMult', 'fEngineDamageMult',
-    'fPetrolTankVolume', 'fOilVolume',
+    'fPetrolTankVolume', 'fPetrolConsumptionRate', 'fOilVolume',
+    'fSeatOffsetDistX', 'fSeatOffsetDistY', 'fSeatOffsetDistZ',
 }
 
 local intFields = {
-    'nInitialDriveGears',
+    'nInitialDriveGears', 'nMonetaryValue',
 }
 
 local vectorFields = {
@@ -252,6 +253,23 @@ RegisterNUICallback('setSubHandlingFloat', function(data, cb)
     WithEditableVehicle(function(vehicle)
         SetVehicleHandlingFloat(vehicle, data.className, data.field, data.value + 0.0)
     end)
+    cb('ok')
+end)
+
+RegisterNUICallback('refreshEditor', function(_, cb)
+    if not DoesEntityExist(editVehicle) then
+        cb('ok')
+        return
+    end
+    SendNUIMessage({
+        action = 'showEditor',
+        data = {
+            vehicleName = GetDisplayNameFromVehicleModel(GetEntityModel(editVehicle)),
+            vehicleType = editVehicleType,
+            handling = CollectHandling(editVehicle),
+            subHandling = CollectSubHandling(editVehicle, editVehicleType),
+        }
+    })
     cb('ok')
 end)
 
