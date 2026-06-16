@@ -2,6 +2,11 @@ local isOpen = false
 local editVehicle = 0
 local editVehicleType = 'car'
 
+local activeVehicle = 0
+local activeVehicleType = 'car'
+local activeHandling = nil
+local activeSubHandling = nil
+
 local floatFields = {
     'fMass', 'fInitialDragCoeff', 'fDownforceModifier', 'fPercentSubmerged',
     'fDriveBiasFront', 'fInitialDriveForce', 'fDriveInertia',
@@ -193,6 +198,14 @@ local function OpenEditor()
         return
     end
 
+    local handling = CollectHandling(vehicle)
+    local sub = CollectSubHandling(vehicle, vehType)
+
+    activeVehicle = vehicle
+    activeVehicleType = vehType
+    activeHandling = handling
+    activeSubHandling = sub
+
     SetNuiFocus(true, true)
     isOpen = true
 
@@ -201,8 +214,8 @@ local function OpenEditor()
         data = {
             vehicleName = modelName,
             vehicleType = vehType,
-            handling = CollectHandling(vehicle),
-            subHandling = CollectSubHandling(vehicle, vehType),
+            handling = handling,
+            subHandling = sub,
         }
     })
 end
@@ -231,6 +244,7 @@ RegisterNUICallback('setHandlingFloat', function(data, cb)
     WithEditableVehicle(function(vehicle)
         SetVehicleHandlingFloat(vehicle, 'CHandlingData', data.field, data.value + 0.0)
     end)
+    if activeHandling then activeHandling[data.field] = data.value end
     cb('ok')
 end)
 
@@ -238,6 +252,7 @@ RegisterNUICallback('setHandlingInt', function(data, cb)
     WithEditableVehicle(function(vehicle)
         SetVehicleHandlingInt(vehicle, 'CHandlingData', data.field, data.value)
     end)
+    if activeHandling then activeHandling[data.field] = data.value end
     cb('ok')
 end)
 
@@ -246,6 +261,7 @@ RegisterNUICallback('setHandlingVector', function(data, cb)
         SetVehicleHandlingVector(vehicle, 'CHandlingData', data.field,
             vector3(data.x + 0.0, data.y + 0.0, data.z + 0.0))
     end)
+    if activeHandling then activeHandling[data.field] = { x = data.x, y = data.y, z = data.z } end
     cb('ok')
 end)
 
@@ -253,7 +269,55 @@ RegisterNUICallback('setSubHandlingFloat', function(data, cb)
     WithEditableVehicle(function(vehicle)
         SetVehicleHandlingFloat(vehicle, data.className, data.field, data.value + 0.0)
     end)
+    if activeSubHandling then activeSubHandling[data.field] = data.value end
     cb('ok')
+end)
+
+CreateThread(function()
+    while true do
+        Wait(500)
+        if activeVehicle ~= 0 then
+            if not DoesEntityExist(activeVehicle) then
+                activeVehicle = 0
+                activeHandling = nil
+                activeSubHandling = nil
+            else
+                local ped = PlayerPedId()
+                if GetVehiclePedIsIn(ped, false) ~= activeVehicle then
+                    activeVehicle = 0
+                    activeHandling = nil
+                    activeSubHandling = nil
+                elseif NetworkHasControlOfEntity(activeVehicle) then
+                    if activeHandling then
+                        for _, field in ipairs(floatFields) do
+                            if activeHandling[field] then
+                                SetVehicleHandlingFloat(activeVehicle, 'CHandlingData', field, activeHandling[field] + 0.0)
+                            end
+                        end
+                        for _, field in ipairs(intFields) do
+                            if activeHandling[field] then
+                                SetVehicleHandlingInt(activeVehicle, 'CHandlingData', field, activeHandling[field])
+                            end
+                        end
+                        for _, field in ipairs(vectorFields) do
+                            if activeHandling[field] then
+                                local v = activeHandling[field]
+                                SetVehicleHandlingVector(activeVehicle, 'CHandlingData', field, vector3(v.x + 0.0, v.y + 0.0, v.z + 0.0))
+                            end
+                        end
+                    end
+                    if activeSubHandling then
+                        local subConfig = subHandlingFields[activeVehicleType]
+                        if subConfig then
+                            for field, value in pairs(activeSubHandling) do
+                                pcall(SetVehicleHandlingFloat, activeVehicle, subConfig.className, field, value + 0.0)
+                            end
+                        end
+                    end
+                end
+            end
+        end
+    end
 end)
 
 RegisterNUICallback('refreshEditor', function(_, cb)
