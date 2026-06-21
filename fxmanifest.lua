@@ -3,7 +3,7 @@ game 'gta5'
 
 author 'Reluctant'
 description 'In-game vehicle handling editor'
-version '0.6.5'
+version '0.7.0'
 
 shared_scripts {
     'config.lua',
