@@ -36,8 +36,6 @@ local subHandlingFields = {
         floats = {
             'fToeFront', 'fToeRear', 'fCamberFront', 'fCamberRear', 'fCastor',
             'fEngineResistance', 'fMaxDriveBiasTransfer', 'fJumpForceScale',
-            'fBackEndPopUpCarImpulseScale', 'fBackEndPopUpBuildingImpulseScale',
-            'fBackEndPopUpMaxDeltaSpeed', 'fIncreasedRearBrakesBiasMod', 'fLowSpeedBumpSensitivity',
         }
     },
     bike = {
@@ -144,41 +142,21 @@ local function Notify(message)
     EndTextCommandThefeedPostTicker(false, false)
 end
 
-local function EnsureControlOfVehicle(vehicle)
-    if not DoesEntityExist(vehicle) then
-        return false, 'Vehicle no longer exists'
-    end
-
-    if not NetworkGetEntityIsNetworked(vehicle) then
-        return true
-    end
-
-    if NetworkHasControlOfEntity(vehicle) then
-        return true
-    end
-
-    local timeoutAt = GetGameTimer() + 1500
-    repeat
-        NetworkRequestControlOfEntity(vehicle)
-        Wait(0)
-    until NetworkHasControlOfEntity(vehicle) or GetGameTimer() > timeoutAt
-
-    if NetworkHasControlOfEntity(vehicle) then
-        return true
-    end
-
-    return false, 'No network control of this vehicle'
-end
 
 local function WithEditableVehicle(applyFn)
-    local ok, err = EnsureControlOfVehicle(editVehicle)
-    if not ok then
-        Notify(('Handling update failed: %s'):format(err))
+    if not DoesEntityExist(editVehicle) then
+        Notify('Handling update failed: vehicle no longer exists')
         return false
     end
-
     applyFn(editVehicle)
     return true
+end
+
+local function RestoreVehicleState(vehicle)
+    SetVehicleEngineOn(vehicle, true, true, false)
+    SetVehicleEngineHealth(vehicle, 1000.0)
+    SetVehicleFuelLevel(vehicle, 100.0)
+    SetVehicleFixed(vehicle)
 end
 
 local function OpenEditor()
@@ -192,11 +170,7 @@ local function OpenEditor()
     editVehicle = vehicle
     editVehicleType = vehType
 
-    local hasControl, err = EnsureControlOfVehicle(vehicle)
-    if not hasControl then
-        Notify(('Cannot open handling editor: %s'):format(err))
-        return
-    end
+    RestoreVehicleState(vehicle)
 
     local handling = CollectHandling(vehicle)
     local sub = CollectSubHandling(vehicle, vehType)
@@ -243,6 +217,7 @@ end)
 RegisterNUICallback('setHandlingFloat', function(data, cb)
     WithEditableVehicle(function(vehicle)
         SetVehicleHandlingFloat(vehicle, 'CHandlingData', data.field, data.value + 0.0)
+        ModifyVehicleTopSpeed(vehicle, 1.0)
     end)
     if activeHandling then activeHandling[data.field] = data.value end
     cb('ok')
@@ -250,6 +225,9 @@ end)
 
 RegisterNUICallback('setHandlingInt', function(data, cb)
     WithEditableVehicle(function(vehicle)
+        if data.field == 'nInitialDriveGears' then
+            SetVehicleHighGear(vehicle, math.floor(data.value))
+        end
         SetVehicleHandlingInt(vehicle, 'CHandlingData', data.field, data.value)
     end)
     if activeHandling then activeHandling[data.field] = data.value end
@@ -273,9 +251,48 @@ RegisterNUICallback('setSubHandlingFloat', function(data, cb)
     cb('ok')
 end)
 
+local function ApplyActiveHandling()
+    if not DoesEntityExist(activeVehicle) then return end
+
+    if activeHandling then
+        for _, field in ipairs(floatFields) do
+            if activeHandling[field] then
+                SetVehicleHandlingFloat(activeVehicle, 'CHandlingData', field, activeHandling[field] + 0.0)
+            end
+        end
+        ModifyVehicleTopSpeed(activeVehicle, 1.0)
+        for _, field in ipairs(intFields) do
+            if activeHandling[field] then
+                if field == 'nInitialDriveGears' then
+                    SetVehicleHighGear(activeVehicle, math.floor(activeHandling[field]))
+                end
+                SetVehicleHandlingInt(activeVehicle, 'CHandlingData', field, activeHandling[field])
+            end
+        end
+        for _, field in ipairs(vectorFields) do
+            if activeHandling[field] then
+                local v = activeHandling[field]
+                SetVehicleHandlingVector(activeVehicle, 'CHandlingData', field, vector3(v.x + 0.0, v.y + 0.0, v.z + 0.0))
+            end
+        end
+    end
+
+    if activeSubHandling then
+        local subConfig = subHandlingFields[activeVehicleType]
+        if subConfig then
+            for field, value in pairs(activeSubHandling) do
+                pcall(SetVehicleHandlingFloat, activeVehicle, subConfig.className, field, value + 0.0)
+            end
+        end
+    end
+end
+
 CreateThread(function()
+    local maintainFrame = 0
     while true do
-        Wait(500)
+        -- Fast tick while editor is open, slow tick after close (values already applied)
+        Wait(isOpen and 0 or 500)
+
         if activeVehicle ~= 0 then
             if not DoesEntityExist(activeVehicle) then
                 activeVehicle = 0
@@ -287,31 +304,17 @@ CreateThread(function()
                     activeVehicle = 0
                     activeHandling = nil
                     activeSubHandling = nil
-                elseif NetworkHasControlOfEntity(activeVehicle) then
-                    if activeHandling then
-                        for _, field in ipairs(floatFields) do
-                            if activeHandling[field] then
-                                SetVehicleHandlingFloat(activeVehicle, 'CHandlingData', field, activeHandling[field] + 0.0)
-                            end
-                        end
-                        for _, field in ipairs(intFields) do
-                            if activeHandling[field] then
-                                SetVehicleHandlingInt(activeVehicle, 'CHandlingData', field, activeHandling[field])
-                            end
-                        end
-                        for _, field in ipairs(vectorFields) do
-                            if activeHandling[field] then
-                                local v = activeHandling[field]
-                                SetVehicleHandlingVector(activeVehicle, 'CHandlingData', field, vector3(v.x + 0.0, v.y + 0.0, v.z + 0.0))
-                            end
-                        end
-                    end
-                    if activeSubHandling then
-                        local subConfig = subHandlingFields[activeVehicleType]
-                        if subConfig then
-                            for field, value in pairs(activeSubHandling) do
-                                pcall(SetVehicleHandlingFloat, activeVehicle, subConfig.className, field, value + 0.0)
-                            end
+                else
+                    ApplyActiveHandling()
+
+                    if isOpen then
+                        -- Keep engine alive and at full power every ~5s so damage doesn't mask edits
+                        maintainFrame = maintainFrame + 1
+                        if maintainFrame >= 300 then
+                            maintainFrame = 0
+                            SetVehicleEngineOn(activeVehicle, true, true, false)
+                            SetVehicleEngineHealth(activeVehicle, 1000.0)
+                            SetVehicleFuelLevel(activeVehicle, 100.0)
                         end
                     end
                 end
