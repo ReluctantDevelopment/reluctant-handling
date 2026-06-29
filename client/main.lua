@@ -6,6 +6,7 @@ local activeVehicle = 0
 local activeVehicleType = 'car'
 local activeHandling = nil
 local activeSubHandling = nil
+local applyPaused = false
 
 local floatFields = {
     'fMass', 'fInitialDragCoeff', 'fDownforceModifier', 'fPercentSubmerged',
@@ -18,8 +19,7 @@ local floatFields = {
     'fSuspensionUpperLimit', 'fSuspensionLowerLimit', 'fSuspensionRaise', 'fSuspensionBiasFront',
     'fAntiRollBarForce', 'fAntiRollBarBiasFront', 'fRollCentreHeightFront', 'fRollCentreHeightRear',
     'fCollisionDamageMult', 'fWeaponDamageMult', 'fDeformationDamageMult', 'fEngineDamageMult',
-    'fPetrolTankVolume', 'fPetrolConsumptionRate', 'fOilVolume',
-    'fSeatOffsetDistX', 'fSeatOffsetDistY', 'fSeatOffsetDistZ',
+    'fPetrolTankVolume', 'fOilVolume',
 }
 
 local intFields = {
@@ -290,7 +290,6 @@ end
 CreateThread(function()
     local maintainFrame = 0
     while true do
-        -- Fast tick while editor is open, slow tick after close (values already applied)
         Wait(isOpen and 0 or 500)
 
         if activeVehicle ~= 0 then
@@ -305,10 +304,9 @@ CreateThread(function()
                     activeHandling = nil
                     activeSubHandling = nil
                 else
-                    ApplyActiveHandling()
+                    if not applyPaused then ApplyActiveHandling() end
 
                     if isOpen then
-                        -- Keep engine alive and at full power every ~5s so damage doesn't mask edits
                         maintainFrame = maintainFrame + 1
                         if maintainFrame >= 300 then
                             maintainFrame = 0
@@ -323,33 +321,98 @@ CreateThread(function()
     end
 end)
 
-RegisterNUICallback('refreshEditor', function(_, cb)
-    if not DoesEntityExist(editVehicle) then
-        cb('ok')
-        return
-    end
+local function RefreshEditorData(vehicle, vehType)
+    applyPaused = true
+    Wait(150)
+    local newHandling = CollectHandling(vehicle)
+    local newSub      = CollectSubHandling(vehicle, vehType)
+    activeHandling    = newHandling
+    activeSubHandling = newSub
+    applyPaused       = false
     SendNUIMessage({
         action = 'showEditor',
         data = {
-            vehicleName = GetDisplayNameFromVehicleModel(GetEntityModel(editVehicle)),
-            vehicleType = editVehicleType,
-            handling = CollectHandling(editVehicle),
-            subHandling = CollectSubHandling(editVehicle, editVehicleType),
+            vehicleName = GetDisplayNameFromVehicleModel(GetEntityModel(vehicle)),
+            vehicleType = vehType,
+            handling    = newHandling,
+            subHandling = newSub,
         }
     })
+end
+
+RegisterNUICallback('refreshEditor', function(_, cb)
+    if DoesEntityExist(editVehicle) then
+        RefreshEditorData(editVehicle, editVehicleType)
+    end
     cb('ok')
 end)
 
 RegisterNUICallback('maxUpgradeVehicle', function(_, cb)
     if DoesEntityExist(editVehicle) then
+        applyPaused = true
+        Wait(0)
         MaxUpgradeVehicle(editVehicle)
+        RefreshEditorData(editVehicle, editVehicleType)
     end
     cb('ok')
 end)
 
 RegisterNUICallback('removeVehicleMods', function(_, cb)
     if DoesEntityExist(editVehicle) then
+        applyPaused = true
+        Wait(0)
         RemoveVehicleMods(editVehicle)
+        RefreshEditorData(editVehicle, editVehicleType)
     end
     cb('ok')
+end)
+
+RegisterNUICallback('spawnVehicle', function(data, cb)
+    local modelName = type(data.model) == 'string' and data.model:lower() or ''
+    if modelName == '' then cb({ ok = false, error = 'Enter a model name' }); return end
+
+    local hash = GetHashKey(modelName)
+    if not IsModelInCdimage(hash) or not IsModelAVehicle(hash) then
+        cb({ ok = false, error = 'Unknown model: ' .. modelName })
+        return
+    end
+
+    RequestModel(hash)
+    local waited = 0
+    while not HasModelLoaded(hash) and waited < 5000 do
+        Wait(10); waited = waited + 10
+    end
+    if not HasModelLoaded(hash) then cb({ ok = false, error = 'Model failed to load' }); return end
+
+    local ped     = PlayerPedId()
+    local pos     = GetEntityCoords(ped)
+    local heading = GetEntityHeading(ped)
+    local vehicle = CreateVehicle(hash, pos.x, pos.y, pos.z, heading, true, false)
+    SetModelAsNoLongerNeeded(hash)
+
+    if not DoesEntityExist(vehicle) then cb({ ok = false, error = 'Vehicle creation failed' }); return end
+
+    SetVehicleOnGroundProperly(vehicle)
+    SetPedIntoVehicle(ped, vehicle, -1)
+    Wait(100)
+    RestoreVehicleState(vehicle)
+
+    local vehType  = DetectVehicleType(vehicle)
+    local handling = CollectHandling(vehicle)
+    local sub      = CollectSubHandling(vehicle, vehType)
+
+    editVehicle      = vehicle
+    editVehicleType  = vehType
+    activeVehicle    = vehicle
+    activeVehicleType = vehType
+    activeHandling   = handling
+    activeSubHandling = sub
+
+    cb({
+        ok          = true,
+        vehicleName = GetDisplayNameFromVehicleModel(GetEntityModel(vehicle)),
+        vehicleType = vehType,
+        handling    = handling,
+        subHandling = sub,
+    })
 end)
